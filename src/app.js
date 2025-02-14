@@ -1,42 +1,26 @@
 const express = require('express');
 const connectDB = require('./config/database');
 const app = express();
+const cookieParser = require('cookie-parser');
+
+const { authRouter, requestRouter, profileRouter } = require('./routes');
 
 // middleware to parse the incoming request body to JSON
 app.use(express.json());
+app.use(cookieParser());
+app.use('/', authRouter);
+app.use('/', requestRouter);
+app.use('/', profileRouter);
 
 const port = 7777;
 const UserModel = require('./models/user');
-
-app.post('/signup', async (req, res) => {
-  console.log('req.body', req.body)
-  const userObj = {
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    emailId: req.body.emailId,
-    password: req.body.password,
-    age: req.body.age,
-    gender: req.body.gender,
-  };
-
-  // creating a new instance of UserModel
-  const user = new UserModel(userObj);
-
-  // saving the user to the database
-  try {
-    const savedUser = await user.save();
-    res.status(201).send(savedUser);
-    console.log('savedUser', savedUser);
-  } catch (error) {
-    console.log('error', error)
-    res.status(400).send('something went wrong');
-  }
-});
+const { validateSignupData } = require('./utils/validation');
+const { userAuth } = require('./middlewares/auth ');
 
 // User API
 app.get('/user', async (req, res) => {
   try {
-    const users = await UserModel.findOne({ emailId: req.body?.emailId })
+    const users = await UserModel.findOne({ emailId: req.body?.emailId });
     // const users = await UserModel.find({ emailId: req.body?.emailId }) // this will return an array
     console.log('users', users);
     if (!users) {
@@ -46,6 +30,20 @@ app.get('/user', async (req, res) => {
     }
   } catch (error) {
     res.status(400).send('something went wrong');
+  }
+});
+
+// getConnectionRequest API
+app.get('/getConnectionRequest', userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(404).send('No user found');
+    } else {
+      return res.status(200).send(user);
+    }
+  } catch (error) {
+    res.status(500).send('something went wrong');
   }
 });
 
@@ -68,7 +66,7 @@ app.delete('/user', async (req, res) => {
   try {
     // const users = await UserModel.findOneAndDelete({ emailId: req.body?.emailId });
     const users = await UserModel.findByIdAndDelete(req.body?.userId);
-    console.log('users', users)
+    console.log('users', users);
     if (!users) {
       return res.status(404).send('No user found');
     } else {
@@ -80,26 +78,53 @@ app.delete('/user', async (req, res) => {
 });
 
 // Update User Data API
-app.patch('/user', async (req, res) => {
+app.patch(`/user/:userId`, async (req, res) => {
   try {
-    const users = await UserModel.findByIdAndUpdate(req.body?.userId, req.body, { new: true, returnDocument: 'after' });
-    if (!users) {
+    const userId = req.params?.userId;
+    const ALLOWED_UPDATES = [
+      'firstName',
+      'lastName',
+      'age',
+      'gender',
+      'skills',
+      'about',
+      'photoUrl',
+    ];
+
+    const isUpdateAllowed = Object.keys(req.body).every((update) =>
+      ALLOWED_UPDATES.includes(update)
+    );
+    if (!isUpdateAllowed) {
+      return res.status(400).send('Update not allowed for some fields');
+    }
+
+    if (req?.body?.skills && !Array.isArray(req?.body?.skills)) {
+      return res.status(400).send('Skills should be an array');
+    } else if (req?.body?.skills?.length > 10) {
+      return res.status(400).send('Skills should not be more than 10');
+    }
+
+    const user = await UserModel.findByIdAndUpdate(userId, req.body, {
+      new: true,
+      returnDocument: 'after',
+      runValidators: true,
+    });
+    if (!user) {
       return res.status(404).send('No user found');
     } else {
-      return res.status(200).send(users);
+      return res.status(200).send(user);
     }
   } catch (error) {
-    res.status(500).send('something went wrong');
+    res.status(500).send('UPDATE FAILED: ' + error);
   }
-}
-);
+});
 
 // first connect to DB and then start the server
 connectDB()
   .then(() => {
     console.log('Connected to MongoDB');
     app.listen(port, () => {
-      console.log(`Example app listening at http://localhost:${port}`);
+      console.log(`DevTinder listening at http://localhost:${port}`);
     });
   })
   .catch((error) => {
