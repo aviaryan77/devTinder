@@ -1,7 +1,7 @@
 const express = require('express');
 const UserModel = require('../models/user');
 const jwt = require('jsonwebtoken');
-const { userAuth } = require('../middlewares/auth ');
+const { userAuth } = require('../middlewares/auth');
 const { validateEditProfileData } = require('../utils/validation');
 
 const profileRouter = express.Router();

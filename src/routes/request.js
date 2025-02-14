@@ -1,5 +1,5 @@
 const express = require('express');
-const { userAuth } = require('../middlewares/auth ');
+const { userAuth } = require('../middlewares/auth');
 const ConnectionRequest = require('../models/connectionRequest');
 const UserModel = require('../models/user');
 
@@ -68,9 +68,8 @@ requestRouter.post(
   async (req, res) => {
     try {
       const user = req.user;
-      const fromUserId = user?._id;
-      const requestId = req.params.requestId;
-      const status = req.params.status; // rejected, accepted
+      const toUserId = user?._id;
+      const {requestId, status} = req.params; // rejected, accepted
 
       const allowedStatus = ['rejected', 'accepted'];
       if (!allowedStatus.includes(status)) {
@@ -79,15 +78,32 @@ requestRouter.post(
         });
       }
 
-      // check if the requestId exists
-      const userExists = await UserModel.findOne({ _id: requestId });
-      if (!userExists) {
+
+            // check if the request exists
+      const connectionRequest = await ConnectionRequest.findOne({
+        _id: requestId,
+        toUserId: toUserId,
+        status: 'interested',
+      });
+
+      if (!connectionRequest) {
         return res.status(404).json({
-          message: 'User not found',
+          message: 'Connection Request not found',
         });
       }
 
-      // check if the request exists
+      console.log('connectionRequest', connectionRequest)
+
+      connectionRequest.status = status;
+      const data = await connectionRequest.save();
+
+      res.status(200).json({
+        message: 'Request reviewed successfully',
+        data,
+      }); 
+
+   
+
     } catch (error) {
       res.status(500).send('something went wrong' + error);
     }

@@ -3,7 +3,7 @@ const connectDB = require('./config/database');
 const app = express();
 const cookieParser = require('cookie-parser');
 
-const { authRouter, requestRouter, profileRouter } = require('./routes');
+const { authRouter, requestRouter, profileRouter,userRouter } = require('./routes');
 
 // middleware to parse the incoming request body to JSON
 app.use(express.json());
@@ -11,11 +11,12 @@ app.use(cookieParser());
 app.use('/', authRouter);
 app.use('/', requestRouter);
 app.use('/', profileRouter);
+app.use('/', userRouter);
 
 const port = 7777;
 const UserModel = require('./models/user');
 const { validateSignupData } = require('./utils/validation');
-const { userAuth } = require('./middlewares/auth ');
+const { userAuth } = require('./middlewares/auth');
 
 // User API
 app.get('/user', async (req, res) => {
