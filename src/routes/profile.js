@@ -7,24 +7,16 @@ const { validateEditProfileData } = require('../utils/validation');
 const profileRouter = express.Router();
 
 // Profile API
-profileRouter.get('/profile/view', async (req, res) => {
+profileRouter.get('/profile/view', userAuth, async (req, res) => {
   try {
     const cookie = req.cookies;
     const { token } = cookie;
 
-    if (!token) {
-      throw new Error('No token found');
-    }
-
-    // validate my token
-    const decodedMessage = jwt.verify(token, 'secret');
-    const { _id } = decodedMessage;
-    const user = await UserModel.findById(_id);
-    if (!user) {
-      return res.status(404).send('No user found');
-    } else {
-      return res.status(200).send(user);
-    }
+    const user = req.user;
+    return res.status(200).json({
+      message: 'Profile fetched successfully',
+      data: user,
+    });
   } catch (error) {
     res.status(400).send('get profile error' + error);
   }

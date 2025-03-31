@@ -3,6 +3,8 @@ const connectDB = require('./config/database');
 const app = express();
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const http = require('http');
+const initializeServer = require('./utils/socket');
 
 const {
   authRouter,
@@ -22,6 +24,10 @@ app.use('/', authRouter);
 app.use('/', requestRouter);
 app.use('/', profileRouter);
 app.use('/', userRouter);
+
+const server = http.createServer(app);
+const io = initializeServer(server);
+
 
 const port = 7777;
 const UserModel = require('./models/user');
@@ -134,7 +140,8 @@ app.patch(`/user/:userId`, async (req, res) => {
 connectDB()
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(port, () => {
+    // app.listen(port, () => {
+      server.listen(port, () => {
       console.log(`DevTinder listening at http://localhost:${port}`);
     });
   })
